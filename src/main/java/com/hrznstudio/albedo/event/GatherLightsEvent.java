@@ -2,7 +2,7 @@ package com.hrznstudio.albedo.event;
 
 import com.google.common.collect.ImmutableList;
 import com.hrznstudio.albedo.lighting.Light;
-import net.minecraft.client.renderer.culling.ICamera;
+import net.minecraft.client.renderer.culling.ClippingHelperImpl;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -14,9 +14,9 @@ public class GatherLightsEvent extends Event {
     private final ArrayList<Light> lights;
     private final float maxDistance;
     private final Vec3d cameraPosition;
-    private final ICamera camera;
+    private final ClippingHelperImpl camera;
 
-    public GatherLightsEvent(ArrayList<Light> lights, float maxDistance, Vec3d cameraPosition, ICamera camera) {
+    public GatherLightsEvent(ArrayList<Light> lights, float maxDistance, Vec3d cameraPosition, ClippingHelperImpl camera) {
         this.lights = lights;
         this.maxDistance = maxDistance;
         this.cameraPosition = cameraPosition;
@@ -35,7 +35,7 @@ public class GatherLightsEvent extends Event {
         return cameraPosition;
     }
 
-    public ICamera getCamera() {
+    public ClippingHelperImpl getCamera() {
         return camera;
     }
 

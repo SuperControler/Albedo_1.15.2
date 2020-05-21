@@ -1,6 +1,6 @@
 package com.hrznstudio.albedo.util;
 
-import net.minecraft.client.renderer.OpenGlHelper;
+import com.mojang.blaze3d.platform.GlStateManager;
 import net.minecraft.resources.IResource;
 import net.minecraft.resources.IResourceManager;
 import net.minecraft.util.ResourceLocation;
@@ -32,30 +32,30 @@ public class ShaderUtil implements ISelectiveResourceReloadListener {
     }
 
     public static int loadProgram(String vsh, String fsh, IResourceManager manager) {
-        int vertexShader = createShader(vsh, OpenGlHelper.GL_VERTEX_SHADER, manager);
-        int fragmentShader = createShader(fsh, OpenGlHelper.GL_FRAGMENT_SHADER, manager);
-        int program = OpenGlHelper.glCreateProgram();
-        OpenGlHelper.glAttachShader(program, vertexShader);
-        OpenGlHelper.glAttachShader(program, fragmentShader);
-        OpenGlHelper.glLinkProgram(program);
+        int vertexShader = createShader(vsh, GL20.GL_VERTEX_SHADER, manager);
+        int fragmentShader = createShader(fsh, GL20.GL_FRAGMENT_SHADER, manager);
+        int program = GL20.glCreateProgram();
+        GL20.glAttachShader(program, vertexShader);
+        GL20.glAttachShader(program, fragmentShader);
+        GL20.glLinkProgram(program);
         String s = GL20.glGetProgramInfoLog(program);
         System.out.println("GL LOG: "+s);
         return program;
     }
 
     public static int createShader(String filename, int shaderType, IResourceManager manager) {
-        int shader = OpenGlHelper.glCreateShader(shaderType);
+        int shader = GlStateManager.createShader(shaderType);
         if (shader == 0)
             return 0;
         try {
             String s =readFileAsString(filename, manager);
-            OpenGlHelper.glShaderSource(shader, s);
+            GL20.glShaderSource(shader, s);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        OpenGlHelper.glCompileShader(shader);
+        GL20.glCompileShader(shader);
 
-        if (GL20.glGetShaderi(shader, OpenGlHelper.GL_COMPILE_STATUS) == GL11.GL_FALSE)
+        if (GL20.glGetShaderi(shader, GL20.GL_COMPILE_STATUS) == GL11.GL_FALSE)
             throw new RuntimeException("Error creating shader: " + getLogInfo(shader));
 
         return shader;

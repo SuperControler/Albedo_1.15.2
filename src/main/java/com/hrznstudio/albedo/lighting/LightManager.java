@@ -4,16 +4,23 @@ import com.hrznstudio.albedo.Albedo;
 import com.hrznstudio.albedo.ConfigManager;
 import com.hrznstudio.albedo.event.GatherLightsEvent;
 import com.hrznstudio.albedo.util.ShaderManager;
+import com.mojang.blaze3d.matrix.MatrixStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.culling.Frustum;
-import net.minecraft.client.renderer.culling.ICamera;
+import net.minecraft.client.renderer.ActiveRenderInfo;
+import net.minecraft.client.renderer.Matrix4f;
+import net.minecraft.client.renderer.Vector3f;
+import net.minecraft.client.renderer.culling.ClippingHelperImpl;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.potion.Effects;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraftforge.client.ForgeHooksClient;
+import net.minecraftforge.client.event.EntityViewRenderEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.LazyOptional;
 
@@ -22,7 +29,7 @@ import java.util.Comparator;
 
 public class LightManager {
     public static Vec3d cameraPos;
-    public static ICamera camera;
+    public static ClippingHelperImpl camera;
     public static ArrayList<Light> lights = new ArrayList<Light>();
     public static DistComparator distComparator = new DistComparator();
 
@@ -47,9 +54,9 @@ public class LightManager {
 
     private static Vec3d interpolate(Entity entity, float partialTicks) {
         return new Vec3d(
-                entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * partialTicks,
-                entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * partialTicks,
-                entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * partialTicks
+                entity.lastTickPosX + (entity.getPosX() - entity.lastTickPosX) * partialTicks,
+                entity.lastTickPosY + (entity.getPosY() - entity.lastTickPosY) * partialTicks,
+                entity.lastTickPosZ + (entity.getPosZ() - entity.lastTickPosZ) * partialTicks
         );
     }
 
@@ -58,8 +65,37 @@ public class LightManager {
         Entity cameraEntity = mc.getRenderViewEntity();
         if (cameraEntity != null) {
             cameraPos = interpolate(cameraEntity, mc.getRenderPartialTicks());
-            camera = new Frustum();
-            camera.setPosition(cameraPos.x, cameraPos.y, cameraPos.z);
+            float partialTicks = mc.getRenderPartialTicks();
+            MatrixStack matrixstack = new MatrixStack();
+            matrixstack.getLast().getMatrix().mul(mc.gameRenderer.getProjectionMatrix(mc.gameRenderer.getActiveRenderInfo(), partialTicks, true));
+            assert mc.player != null;
+            float f = MathHelper.lerp(partialTicks, mc.player.prevTimeInPortal, mc.player.timeInPortal);
+            if (f > 0.0F) {
+                int i = 20;
+                if (mc.player.isPotionActive(Effects.NAUSEA)) {
+                    i = 7;
+                }
+                float f1 = 5.0F / (f * f + 5.0F) - f * 0.04F;
+                f1 = f1 * f1;
+                Vector3f vector3f = new Vector3f(0.0F, MathHelper.SQRT_2 / 2.0F, MathHelper.SQRT_2 / 2.0F);
+                matrixstack.rotate(vector3f.rotationDegrees(((float)mc.player.ticksExisted + partialTicks) * (float)i));
+                matrixstack.scale(1.0F / f1, 1.0F, 1.0F);
+                float f2 = -((float)mc.player.ticksExisted + partialTicks) * (float)i;
+                matrixstack.rotate(vector3f.rotationDegrees(f2));
+            }
+            Matrix4f matrix4f = matrixstack.getLast().getMatrix();
+
+            matrixstack = new MatrixStack();
+            EntityViewRenderEvent.CameraSetup cameraSetup = ForgeHooksClient.onCameraSetup(mc.gameRenderer, mc.gameRenderer.getActiveRenderInfo(), partialTicks);
+            ActiveRenderInfo activeRenderInfo = mc.gameRenderer.getActiveRenderInfo();
+            activeRenderInfo.setAnglesInternal(cameraSetup.getYaw(), cameraSetup.getPitch());
+
+            matrixstack.rotate(Vector3f.ZP.rotationDegrees(cameraSetup.getRoll()));
+            matrixstack.rotate(Vector3f.XP.rotationDegrees(activeRenderInfo.getPitch()));
+            matrixstack.rotate(Vector3f.YP.rotationDegrees(activeRenderInfo.getYaw() + 180.0F));
+
+            camera = new ClippingHelperImpl(matrixstack.getLast().getMatrix(), matrix4f);
+            camera.setCameraPosition(cameraPos.x, cameraPos.y, cameraPos.z);
         } else {
             if (cameraPos == null) {
                 cameraPos = new Vec3d(0, 0, 0);
@@ -81,8 +117,8 @@ public class LightManager {
                 cameraPos.y + maxDist,
                 cameraPos.z + maxDist
         ))) {
-            if (e instanceof EntityItem) {
-                LazyOptional<ILightProvider> provider = ((EntityItem) e).getItem().getCapability(Albedo.LIGHT_PROVIDER_CAPABILITY);
+            if (e instanceof ItemEntity) {
+                LazyOptional<ILightProvider> provider = ((ItemEntity) e).getItem().getCapability(Albedo.LIGHT_PROVIDER_CAPABILITY);
                 provider.ifPresent(p -> p.gatherLights(event, e));
             }
             LazyOptional<ILightProvider> provider = e.getCapability(Albedo.LIGHT_PROVIDER_CAPABILITY);

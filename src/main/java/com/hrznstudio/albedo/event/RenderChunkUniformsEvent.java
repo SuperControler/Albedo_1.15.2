@@ -1,17 +1,17 @@
 package com.hrznstudio.albedo.event;
 
-import net.minecraft.client.renderer.chunk.RenderChunk;
+import net.minecraft.client.renderer.chunk.ChunkRenderDispatcher;
 import net.minecraftforge.eventbus.api.Event;
 
 public class RenderChunkUniformsEvent extends Event {
-    private final RenderChunk renderChunk;
+    private final ChunkRenderDispatcher.ChunkRender renderChunk;
 
-    public RenderChunkUniformsEvent(RenderChunk r) {
+    public RenderChunkUniformsEvent(ChunkRenderDispatcher.ChunkRender r) {
         super();
         this.renderChunk = r;
     }
 
-    public RenderChunk getChunk() {
+    public ChunkRenderDispatcher.ChunkRender getChunk() {
         return renderChunk;
     }
 

@@ -77,7 +77,7 @@ public class Light {
         }
 
         public Builder pos(Entity e) {
-            return pos(e.posX, e.posY, e.posZ);
+            return pos(e.getPosX(), e.getPosY(), e.getPosZ());
         }
 
         public Builder pos(double x, double y, double z) {
